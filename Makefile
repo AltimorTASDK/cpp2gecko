@@ -21,6 +21,7 @@ OBJDUMP := powerpc-eabi-objdump
 
 ROOT   := $(patsubst %/, %, $(strip $(dir $(lastword $(MAKEFILE_LIST)))))
 TOOLS  := $(ROOT)/tools
+ASMDIR := $(BUILDDIR)/asm
 BINDIR := $(BUILDDIR)/bin
 OBJDIR := $(BUILDDIR)/obj
 DEPDIR := $(BUILDDIR)/dep
@@ -52,19 +53,19 @@ SRCFILES := $(foreach dir, $(SRCDIR), $(shell find $(dir) -type f -name '*.c'   
             $(foreach dir, $(SRCDIR), $(shell find $(dir) -type f -name '*.S'   2> /dev/null))
 
 OBJFILES := $(patsubst %, $(OBJDIR)/%.o, $(SRCFILES))
+ASMFILES := $(patsubst %, $(ASMDIR)/%.s, $(filter-out %.S, $(SRCFILES)))
 DEPFILES := $(patsubst %, $(DEPDIR)/%.d, $(filter-out %.S, $(SRCFILES)))
+
+ASMFIXED := $(ASMFILES:.s=.out.s)
 
 # Does bl to get PIC base
 OBJFILES += $(OBJDIR)/pic_init.S.o
 
-# Use an intermediate relocatable file to apply fixups
-RELFILE  := $(OBJDIR)/gecko.o
-RELFIXED := $(OBJDIR)/gecko-fixed.o
 ELFFILE  := $(BINDIR)/gecko.elf
 BINFILE  := $(BINDIR)/gecko.bin
 INIFILE  := $(BINDIR)/gecko.ini
 
-DUMPS   := $(patsubst %, %.asm, $(OBJFILES) $(RELFILE) $(RELFIXED) $(ELFFILE))
+DUMPS   := $(patsubst %, %.asm, $(ELFFILE) $(OBJFILES))
 
 TARGETS := $(INIFILE)
 ifdef ASMDUMP
@@ -73,12 +74,6 @@ endif
 
 .PHONY: gecko
 gecko: $(TARGETS) | clean-unused
-
-$(OBJDIR)/%.c.o.asm: %.c
-	$(CXX) $(CFLAGS) -c $< -S -o $@
-
-$(OBJDIR)/%.cpp.o.asm: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -S -o $@
 
 %.asm: %
 	@$(OBJDUMP) -dr --source-comment="# " $< > $@
@@ -92,35 +87,35 @@ $(INIFILE): $(BINFILE)
 $(BINFILE): $(ELFFILE)
 	$(OBJCOPY) -O binary $< $@
 
-$(ELFFILE): $(RELFIXED) $(GECKOLD) $(GAMELD)
+$(ELFFILE): $(OBJFILES) $(ASMFIXED) $(ASMFILES) $(GECKOLD) $(GAMELD)
 	@[ -d $(@D) ] || mkdir -p $(@D)
-	$(CC) $(LDFLAGS) $< -o $@
-
-$(RELFIXED): $(RELFILE) $(GAMELD)
-	python $(TOOLS)/fix_relocations.py $< $@
-
-$(RELFILE): $(OBJFILES) $(GECKOLD) $(GAMELD)
-	@[ -d $(@D) ] || mkdir -p $(@D)
-	$(CC) $(LDFLAGS) $(OBJFILES) -r -o $@
+	$(CC) $(LDFLAGS) $(OBJFILES) -o $@
 
 # PIC initialization
 $(OBJDIR)/pic_init.S.o: $(ROOT)/src/pic_init.S
 	@[ -d $(@D) ] || mkdir -p $(@D)
 	$(CC) $(ASFLAGS) -c $< -o $@
 
-$(OBJDIR)/%.c.o: %.c
+$(OBJDIR)/%.o: $(ASMDIR)/%.out.s
 	@[ -d $(@D) ] || mkdir -p $(@D)
-	@[ -d $(subst $(OBJDIR), $(DEPDIR), $(@D)) ] || mkdir -p $(subst $(OBJDIR), $(DEPDIR), $(@D))
-	$(CC) -MMD -MP -MF $(patsubst $(OBJDIR)/%.o, $(DEPDIR)/%.d, $@) $(CFLAGS) -c $< -o $@
-
-$(OBJDIR)/%.cpp.o: %.cpp
-	@[ -d $(@D) ] || mkdir -p $(@D)
-	@[ -d $(subst $(OBJDIR), $(DEPDIR), $(@D)) ] || mkdir -p $(subst $(OBJDIR), $(DEPDIR), $(@D))
-	$(CXX) -MMD -MP -MF $(patsubst $(OBJDIR)/%.o, $(DEPDIR)/%.d, $@) $(CXXFLAGS) -c $< -o $@
+	$(CC) $(ASFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.S.o: %.S
 	@[ -d $(@D) ] || mkdir -p $(@D)
 	$(CC) $(ASFLAGS) -c $< -o $@
+
+$(ASMDIR)/%.out.s: $(ASMDIR)/%.s $(TOOLS)/process_asm.py $(GAMELD)
+	python $(TOOLS)/process_asm.py $< $@ $(GAMELD)
+
+$(ASMDIR)/%.c.s: %.c
+	@[ -d $(@D) ] || mkdir -p $(@D)
+	@[ -d $(subst $(OBJDIR), $(DEPDIR), $(@D)) ] || mkdir -p $(subst $(OBJDIR), $(DEPDIR), $(@D))
+	$(CC) -MMD -MP -MF $(patsubst $(ASMDIR)/%.s, $(DEPDIR)/%.d, $@) $(CFLAGS) -c $< -S -fverbose-asm -o $@
+
+$(ASMDIR)/%.cpp.s: %.cpp
+	@[ -d $(@D) ] || mkdir -p $(@D)
+	@[ -d $(subst $(ASMDIR), $(DEPDIR), $(@D)) ] || mkdir -p $(subst $(ASMDIR), $(DEPDIR), $(@D))
+	$(CXX) -MMD -MP -MF $(patsubst $(ASMDIR)/%.s, $(DEPDIR)/%.d, $@) $(CXXFLAGS) -c $< -S -fverbose-asm -o $@
 
 $(GAMELD): $(MAPFILE) $(TOOLS)/map_to_linker_script.py
 	python $(TOOLS)/map_to_linker_script.py $< $@
@@ -130,12 +125,15 @@ clean:
 	rm -rf $(BUILDDIR)
 
 # Remove unused build artifacts
+ARTIFACTS := $(shell find $(BUILDDIR) -type f 2> /dev/null)
+USED      := $(GAMELD) $(ASMFILES) $(ASMFIXED) $(OBJFILES) $(DEPFILES) $(DUMPS) \
+             $(ELFFILE) $(BINFILE) $(INIFILE)
+UNUSED    := $(filter-out $(USED), $(ARTIFACTS))
+
 .PHONY: clean-unused
 clean-unused:
-	$(foreach file, $(shell find $(BUILDDIR) -type f 2> /dev/null), \
-		$(if $(filter $(file), \
-			$(GAMELD) $(OBJFILES) $(DEPFILES) $(DUMPS) \
-			$(RELFILE) $(RELFIXED) $(ELFFILE) $(BINFILE) $(INIFILE) \
-		),, rm $(file);))
+ifneq ($(UNUSED),)
+	rm $(UNUSED)
+endif
 
 -include $(DEPFILES)

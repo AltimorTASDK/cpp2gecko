@@ -8,11 +8,13 @@ SECTIONS
     .gecko.target : { KEEP(*(.gecko.target)) }
     .gecko.lines  : { LONG(__gecko_lines);   }
 
-    .init  : { *(.init) }
+    .init  : { KEEP(*(.init)) }
     /* .sdata must be after __init to get address from LR */
     .sdata : { *( .sdata  .sdata.*)
                *(  .sbss   .sbss.*) }
     .text  : { *(  .text   .text.*) }
+
+    .end   : { KEEP(*(.end)) }
 
     . = ALIGN(8);
 
