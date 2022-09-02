@@ -66,12 +66,12 @@ def main():
     parser = argparse.ArgumentParser(description=
         "Fix relocations in a cpp2gecko intermediate relocatable .elf")
 
-    parser.add_argument("in_elf",    help="Input relocatable ELF path")
-    parser.add_argument("out_elf",   help="Output relocatable ELF path")
+    parser.add_argument("in_elf",  help="Input relocatable ELF path")
+    parser.add_argument("out_elf", help="Output relocatable ELF path")
     args = parser.parse_args()
 
-    with open(args.in_elf,    "rb") as in_elf, \
-         open(args.out_elf,   "wb") as out_elf:
+    with (open(args.in_elf,  "rb") as in_elf,
+          open(args.out_elf, "wb") as out_elf):
         fix_up_elf(in_elf, out_elf)
 
 if __name__ == "__main__":
