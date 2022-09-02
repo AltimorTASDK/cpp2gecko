@@ -30,7 +30,7 @@ def fix_reloc(data, reloc, inst_offset, rela_offset, pic_offset, pic_register):
     # Set 16 bit offset into data section
     r_offset = reloc['r_offset'] + 2
     r_info   = (reloc['r_info_sym'] << 8) | R_PPC_SDAREL16
-    r_addend = reloc['r_addend'] + pic_offset + 0x8000
+    r_addend = reloc['r_addend'] + pic_offset + 0x8004
     struct.pack_into(">III", data, rela_offset, r_offset, r_info, r_addend)
 
 def fix_up_elf(in_elf, out_elf):
@@ -64,6 +64,8 @@ def fix_up_elf(in_elf, out_elf):
     pic_base    = symtab.get_symbol_by_name("__pic_base")[0]
     sdata_start = symtab.get_symbol_by_name("__sdata_start")[0]
     pic_offset  = sdata_start['st_value'] - pic_base['st_value']
+
+    print(f"PIC offset {pic_offset}")
 
     for i, reloc in enumerate(relocs.iter_relocations()):
         r_type = reloc['r_info_type']

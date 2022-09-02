@@ -6,12 +6,17 @@ ENTRY(__init);
 SECTIONS
 {
     .gecko.target : { KEEP(*(.gecko.target)) }
+    .gecko.lines  : { LONG(__gecko_lines);   }
 
     .init  : { *(.init) }
     /* .sdata must be after __init to get address from LR */
     .sdata : { *( .sdata  .sdata.*)
                *(  .sbss   .sbss.*) }
     .text  : { *(  .text   .text.*) }
+
+    . = ALIGN(8);
+
+    __gecko_lines = (. - ADDR(.init)) / 8;
 
     /DISCARD/ : { *(.data .data.* .rodata .rodata.* .bss .bss.*) }
 

@@ -62,10 +62,11 @@ RELFILE  := $(OBJDIR)/gecko.o
 RELFIXED := $(OBJDIR)/gecko-fixed.o
 ELFFILE  := $(BINDIR)/gecko.elf
 BINFILE  := $(BINDIR)/gecko.bin
+INIFILE  := $(BINDIR)/gecko.ini
 
 DUMPS   := $(patsubst %, %.asm, $(OBJFILES) $(RELFILE) $(RELFIXED) $(ELFFILE))
 
-TARGETS := $(BINFILE)
+TARGETS := $(INIFILE)
 ifdef ASMDUMP
 TARGETS += $(DUMPS)
 endif
@@ -81,6 +82,12 @@ $(OBJDIR)/%.cpp.o.asm: %.cpp
 
 %.asm: %
 	@$(OBJDUMP) -dr --source-comment="# " $< > $@
+
+$(INIFILE): $(BINFILE)
+#   Convert to 2 columns of hex words
+#   Set C2 code type and make last word null
+	@data=$$(od --endian=big -v -An -w4 -t u4 $< | xargs printf '%08X %08X\n'); \
+	 printf "%s" "C2$${data:2:-8}00000000" > $@
 
 $(BINFILE): $(ELFFILE)
 	$(OBJCOPY) -O binary $< $@
@@ -127,7 +134,8 @@ clean:
 clean-unused:
 	$(foreach file, $(shell find $(BUILDDIR) -type f 2> /dev/null), \
 		$(if $(filter $(file), \
-			$(OBJFILES) $(DEPFILES) $(DUMPS) $(RELFILE) $(RELFIXED) $(ELFFILE) $(GAMELD) \
+			$(GAMELD) $(OBJFILES) $(DEPFILES) $(DUMPS) \
+			$(RELFILE) $(RELFIXED) $(ELFFILE) $(BINFILE) $(INIFILE) \
 		),, rm $(file);))
 
 -include $(DEPFILES)

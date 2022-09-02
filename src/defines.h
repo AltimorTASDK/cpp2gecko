@@ -12,7 +12,8 @@ template<float value> inline auto fp_const = value;
 #define FP(x) ([] { return cpp2gecko_impl::fp_const<x>; }())
 
 #define GECKO_INIT(target, entry, pic_regname)                                 \
-	[[gnu::section(".gecko.target")]] const auto __target = target;        \
+	[[gnu::section(".gecko.target"), gnu::used]]                           \
+	const auto __gecko_target = target;                                    \
 	register void *pic_register asm(pic_regname);                          \
 	extern "C" [[gnu::flatten]] void __call_entry()                        \
 	{                                                                      \
