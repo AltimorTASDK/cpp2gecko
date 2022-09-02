@@ -58,9 +58,6 @@ DEPFILES := $(patsubst %, $(DEPDIR)/%.d, $(filter-out %.S, $(SRCFILES)))
 
 ASMFIXED := $(ASMFILES:.s=.out.s)
 
-# Does bl to get PIC base
-OBJFILES += $(OBJDIR)/pic_init.S.o
-
 ELFFILE  := $(BINDIR)/gecko.elf
 BINFILE  := $(BINDIR)/gecko.bin
 INIFILE  := $(BINDIR)/gecko.ini
@@ -90,11 +87,6 @@ $(BINFILE): $(ELFFILE)
 $(ELFFILE): $(OBJFILES) $(ASMFIXED) $(ASMFILES) $(GECKOLD) $(GAMELD)
 	@[ -d $(@D) ] || mkdir -p $(@D)
 	$(CC) $(LDFLAGS) $(OBJFILES) -o $@
-
-# PIC initialization
-$(OBJDIR)/pic_init.S.o: $(ROOT)/src/pic_init.S
-	@[ -d $(@D) ] || mkdir -p $(@D)
-	$(CC) $(ASFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: $(ASMDIR)/%.out.s
 	@[ -d $(@D) ] || mkdir -p $(@D)
