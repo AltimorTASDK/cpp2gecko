@@ -19,6 +19,14 @@ def asm_generator(asm, name, symbols):
         'pic_reg': None
     }
 
+    r13_base = symbols.get("R13_BASE")
+    r2_base  = symbols.get("R2_BASE")
+
+    if r13_base is not None:
+        r13_range = range(r13_base - 0x8000, r13_base + 0x8000)
+    if r2_base is not None:
+        r2_range = range(r2_base - 0x8000, r2_base + 0x8000)
+
     for n, raw_line in enumerate(asm):
         if raw_line.find("#") != -1:
             line = raw_line[:raw_line.find("#")].strip()
@@ -61,23 +69,43 @@ def asm_generator(asm, name, symbols):
             settings[key] = value
 
         # Make relocations against PIC base
-        if line.endswith("@sda21(0)"):
+        match = re.match(r".*,(\w+)([+-]\d+)?@sda21\(0\)", line)
+        if match is not None:
+            sym, offset = match.groups("+0")
+
+            address = symbols.get(sym)
+            if address is not None:
+                # Game .sdata reference
+                address += int(offset)
+                if r13_base is not None and address in r13_range:
+                    base, reg = r13_base, 13
+                elif r2_base is not None and address in r2_range:
+                    base, reg =  r2_base,  2
+                else:
+                    error(name, n, f"Couldn't resolve GAME_SDATA relocation")
+
+                yield raw_line.replace("@sda21(0)", f"-0x{base:08X}@l({reg})")
+                continue
+
+            # PIC reference
             reg = settings['pic_reg']
             if reg is None:
                 error(name, n, "Encountered @sda21 before .set gecko.pic_reg")
-            raw_line = raw_line.replace("@sda21(0)", f"@sdarel+0x8004({reg})")
+
+            yield raw_line.replace("@sda21(0)", f"+0x8004@sdarel({reg})")
+            continue
 
         yield raw_line
 
 def read_symbols(ldscript, name):
     symbols = {}
     for n, line in enumerate(ldscript):
-        match = re.match(r"(\w+)\s*=\s*0x([0-9A-F]{8});", line)
+        match = re.match(r"(\w+)\s*=\s*0x([0-9a-fA-F]{8});", line)
         if not match:
             error(name, n, "Line not in expected format")
 
         sym, address = match.groups()
-        symbols[sym] = address
+        symbols[sym] = int(address, 16)
 
     return symbols
 

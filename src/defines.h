@@ -18,12 +18,13 @@ extern "C" void __end();
 	asm(".set gecko.pic_reg, " pic_regname);                               \
 	[[gnu::section(".gecko.target"), gnu::used]]                           \
 	const auto __gecko_target = target;                                    \
-	register void *pic_register asm(pic_regname);                          \
+	register void *__pic_register asm(pic_regname);               \
 	extern "C" [[gnu::flatten]] void __entry()                             \
 	{                                                                      \
-		const auto reg_save = pic_register;                            \
-		pic_register = __builtin_return_address(0);                    \
+		/* use volatile to force stack allocation */                   \
+		volatile const auto reg_save = __pic_register;                 \
+		asm volatile("mflr %0" : "=r"(__pic_register));                \
 		entry();                                                       \
-		pic_register = reg_save;                                       \
+		__pic_register = reg_save;                                     \
 		__end();                                                       \
 	}

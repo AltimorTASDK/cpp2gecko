@@ -65,10 +65,10 @@ ELFFILE  := $(BINDIR)/gecko.elf
 BINFILE  := $(BINDIR)/gecko.bin
 INIFILE  := $(BINDIR)/gecko.ini
 
-DUMPS   := $(patsubst %, %.asm, $(ELFFILE) $(OBJFILES))
-
 TARGETS := $(INIFILE)
+
 ifdef ASMDUMP
+DUMPS   := $(patsubst %, %.asm, $(ELFFILE) $(OBJFILES))
 TARGETS += $(DUMPS)
 endif
 
@@ -125,9 +125,13 @@ clean:
 	rm -rf $(BUILDDIR)
 
 # Remove unused build artifacts
+USED := $(GAMELD) $(ASMFILES) $(ASMFIXED) $(OBJFILES) $(DEPFILES) \
+        $(ELFFILE) $(BINFILE) $(INIFILE)
+ifdef ASMDUMP
+USED += $(DUMPS)
+endif
+
 ARTIFACTS := $(shell find $(BUILDDIR) -type f 2> /dev/null)
-USED      := $(GAMELD) $(ASMFILES) $(ASMFIXED) $(OBJFILES) $(DEPFILES) $(DUMPS) \
-             $(ELFFILE) $(BINFILE) $(INIFILE)
 UNUSED    := $(filter-out $(USED), $(ARTIFACTS))
 
 .PHONY: clean-unused
