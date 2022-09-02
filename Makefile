@@ -33,7 +33,7 @@ DEFINES := $(foreach def, $(USERDEFS), -D$(def))
 DEFINES += -DGEKKO -DGECKO
 
 # Access all globals through r31
-CFLAGS   := -g -ffixed-r31 -msdata=eabi -G 4096 -fsingle-precision-constant \
+CFLAGS   := -g -ffixed-r31 -msdata=eabi -G 4096 \
 			$(DEFINES) -mogc -mcpu=750 -meabi -Os \
             -Wall -Wno-switch -Wno-unused-value -Wconversion -Warith-conversion -Wno-multichar \
             -Wno-pointer-arith \
