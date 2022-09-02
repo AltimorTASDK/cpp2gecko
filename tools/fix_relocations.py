@@ -21,16 +21,16 @@ ALLOWED_RELOCS = [
 PPC_RA_SHIFT = 16
 PPC_RA_MASK  = 31 << PPC_RA_SHIFT
 
-def fix_reloc(data, reloc, inst_offset, rela_offset):
-    # Set RA to r31
+def fix_reloc(data, reloc, inst_offset, rela_offset, pic_offset, pic_register):
+    # Set RA to PIC register
     instruction = struct.unpack_from(">I", data, inst_offset)[0]
-    instruction = (instruction & ~PPC_RA_MASK) | (31 << PPC_RA_SHIFT)
+    instruction = (instruction & ~PPC_RA_MASK) | (pic_register << PPC_RA_SHIFT)
     struct.pack_into(">I", data, inst_offset, instruction)
 
     # Set 16 bit offset into data section
     r_offset = reloc['r_offset'] + 2
     r_info   = (reloc['r_info_sym'] << 8) | R_PPC_SDAREL16
-    r_addend = reloc['r_addend'] + 0x8000
+    r_addend = reloc['r_addend'] + pic_offset + 0x8000
     struct.pack_into(">III", data, rela_offset, r_offset, r_info, r_addend)
 
 def fix_up_elf(in_elf, out_elf):
@@ -40,10 +40,30 @@ def fix_up_elf(in_elf, out_elf):
     elf    = ELFFile(in_elf)
     text   = elf.get_section_by_name(".text")
     relocs = elf.get_section_by_name(".rela.text")
+    symtab = elf.get_section_by_name(".symtab")
 
     if relocs is None:
         print("No .text relocations found")
         return
+
+    # Find desired PIC register
+    pic_register = None
+
+    for symbol in symtab.iter_symbols():
+        prefix = "__pic_use_r"
+        if symbol.name.startswith(prefix):
+            pic_register = int(symbol.name[len(prefix):])
+            print(f"PIC register set to r{pic_register}")
+            break
+
+    if pic_register is None:
+        print("No PIC register set")
+        return
+
+    # Account for offset between saved LR and .sdata start
+    pic_base    = symtab.get_symbol_by_name("__pic_base")[0]
+    sdata_start = symtab.get_symbol_by_name("__sdata_start")[0]
+    pic_offset  = sdata_start['st_value'] - pic_base['st_value']
 
     for i, reloc in enumerate(relocs.iter_relocations()):
         r_type = reloc['r_info_type']
@@ -55,7 +75,8 @@ def fix_up_elf(in_elf, out_elf):
         if r_type == R_PPC_EMB_SDA21:
             inst_offset = text['sh_offset'] + reloc['r_offset']
             rela_offset = relocs['sh_offset'] + i * relocs.entry_size
-            fix_reloc(data, reloc, inst_offset, rela_offset)
+            fix_reloc(data, reloc, inst_offset, rela_offset,
+                      pic_offset, pic_register)
             data_count += 1
 
     out_elf.write(data)

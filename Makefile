@@ -32,16 +32,18 @@ LDFLAGS := -Wl,--gc-sections -nostdlib -T$(GECKOLD) -T$(GAMELD)
 DEFINES := $(foreach def, $(USERDEFS), -D$(def))
 DEFINES += -DGEKKO -DGECKO
 
-# Access all globals through r31
-CFLAGS   := -g -ffixed-r31 -msdata=eabi -G 4096 \
-			$(DEFINES) -mogc -mcpu=750 -meabi -Os \
+# Access all globals through PIC register
+CFLAGS   := -msdata=eabi -G 4096 \
+			-mogc -mcpu=750 -meabi -Os -g \
             -Wall -Wno-switch -Wno-unused-value -Wconversion -Warith-conversion -Wno-multichar \
             -Wno-pointer-arith \
             -ffunction-sections -fdata-sections \
             -fno-builtin-sqrt -fno-builtin-sqrtf \
 			$(foreach dir, $(INCLUDE), -I$(dir)) \
 			-I"$(DEVKITPATH)/libogc/include" \
-			-include $(ROOT)/src/defines.h
+			-include $(ROOT)/src/defines.h \
+			$(DEFINES)
+
 ASFLAGS  := $(DEFINES) -Wa,-mregnames -Wa,-mgekko
 CXXFLAGS := $(CFLAGS) -std=c++2b -fconcepts -fno-rtti -fno-exceptions
 
@@ -52,17 +54,18 @@ SRCFILES := $(foreach dir, $(SRCDIR), $(shell find $(dir) -type f -name '*.c'   
 OBJFILES := $(patsubst %, $(OBJDIR)/%.o, $(SRCFILES))
 DEPFILES := $(patsubst %, $(DEPDIR)/%.d, $(filter-out %.S, $(SRCFILES)))
 
-# Initializes r31 to .sdata address
+# Does bl to get PIC base
 OBJFILES += $(OBJDIR)/pic_init.S.o
 
 # Use an intermediate relocatable file to apply fixups
 RELFILE  := $(OBJDIR)/gecko.o
 RELFIXED := $(OBJDIR)/gecko-fixed.o
 ELFFILE  := $(BINDIR)/gecko.elf
+BINFILE  := $(BINDIR)/gecko.bin
 
 DUMPS   := $(patsubst %, %.asm, $(OBJFILES) $(RELFILE) $(RELFIXED) $(ELFFILE))
 
-TARGETS := $(ELFFILE)
+TARGETS := $(BINFILE)
 ifdef ASMDUMP
 TARGETS += $(DUMPS)
 endif
@@ -70,8 +73,17 @@ endif
 .PHONY: gecko
 gecko: $(TARGETS) | clean-unused
 
+$(OBJDIR)/%.c.o.asm: %.c
+	$(CXX) $(CFLAGS) -c $< -S -o $@
+
+$(OBJDIR)/%.cpp.o.asm: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -S -o $@
+
 %.asm: %
 	@$(OBJDUMP) -dr --source-comment="# " $< > $@
+
+$(BINFILE): $(ELFFILE)
+	$(OBJCOPY) -O binary $< $@
 
 $(ELFFILE): $(RELFIXED) $(GECKOLD) $(GAMELD)
 	@[ -d $(@D) ] || mkdir -p $(@D)

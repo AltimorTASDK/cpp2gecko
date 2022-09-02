@@ -5,12 +5,14 @@ ENTRY(__init);
 
 SECTIONS
 {
+    .gecko.target : { KEEP(*(.gecko.target)) }
+
     .init  : { *(.init) }
     /* .sdata must be after __init to get address from LR */
     .sdata : { *( .sdata  .sdata.*)
                *(  .sbss   .sbss.*) }
     .text  : { *(  .text   .text.*) }
 
-    /DISCARD/ : { *(.data .data.* .rodata .rodata.*) }
+    /DISCARD/ : { *(.data .data.* .rodata .rodata.* .bss .bss.*) }
 
 }
