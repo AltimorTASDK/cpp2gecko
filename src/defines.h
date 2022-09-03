@@ -1,4 +1,5 @@
 #include <bit>
+#include <cstdint>
 
 // Force absolute address references
 #define GAME_FUNC   extern "C" [[gnu::longcall]]
@@ -11,8 +12,8 @@ namespace cpp2gecko_impl {
 template<float value> inline auto fp_const = value;
 }
 
-// Wrap in IIFE to prevent writes
-#define FP(x) ([] { return cpp2gecko_impl::fp_const<x>; }())
+// Prevent assignment
+#define FP(x) ([] (auto(cpp2gecko_impl::fp_const<x>))
 
 // Compare a float to a constant using binary representation to avoid an .sdata entry
 namespace cpp2gecko_impl {
@@ -28,7 +29,15 @@ constexpr bool fp_equal(float value)
 }
 }
 
-#define FP_EQUAL(x, c) ([] { return cpp2gecko_impl::fp_equal<c>(x); }())
+#define FP_EQUAL(x, c) (cpp2gecko_impl::fp_equal<c>(x))
+
+// Prevent the compiler from optimizing register writes away
+#define FORCE_WRITE(x) asm volatile(""::"r"(x))
+
+// Symbol supplied by asm finesser
+extern "C" [[gnu::section(".sdata")]] void *__target_stack[];
+
+#define __target_lr ((void(*&)())__target_stack[1])
 
 extern "C" void __end();
 
@@ -37,7 +46,6 @@ extern "C" void __end();
 	const auto __gecko_target = target;                                    \
 	extern "C" [[gnu::flatten, gnu::section(".init")]] void __init()       \
 	{                                                                      \
-		/* use volatile to force stack allocation */                   \
 		entry();                                                       \
 		__end();                                                       \
 	}                                                                      \

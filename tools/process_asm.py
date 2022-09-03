@@ -15,6 +15,8 @@ def asm_generator(asm, name, symbols):
     lr_restore = False
     lr_offset  = None
 
+    stack_offset = 0
+
     settings = {
         'pic_reg': None
     }
@@ -39,8 +41,8 @@ def asm_generator(asm, name, symbols):
         if match is not None:
             sym_name, sym_type = match.groups()
 
-        # Remove unnecessary prologue/epilogue instructions
-        if sym_name == "__entry" and sym_type == "function":
+        if sym_name in ["__init", "__init_pic"] and sym_type == "function":
+            # Remove unnecessary prologue/epilogue instructions
             if line == "bl __end":
                 error(name, n, "No tail call optimization on __end()")
             elif line == "mflr 0":
@@ -60,7 +62,17 @@ def asm_generator(asm, name, symbols):
                 if line == f"lwz 0,{lr_offset}(1)":
                     lr_restore = True
                     continue
+            # Track stack offset to provide __target_stack
+            if line.startswith(".cfi_def_cfa_offset"):
+                stack_offset = int(line.split()[1])
+            # Fix up relocations against __target_stack
+            match = re.match(r"(.*),__target_stack([+-]\d+)?@sda21\(0\)", line)
+            if match is not None:
+                prefix, offset = match.groups("+0")
+                yield f"\t{prefix},{stack_offset}{offset}(1)\n"
+                continue
 
+        # Apply settings from source
         match = re.match(r"\.set gecko\.(.+), (.+)", line)
         if match is not None:
             key, value = match.groups()
