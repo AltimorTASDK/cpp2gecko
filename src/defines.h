@@ -13,7 +13,7 @@ template<float value> inline auto fp_const = value;
 }
 
 // Prevent assignment
-#define FP(x) ([] (auto(cpp2gecko_impl::fp_const<x>))
+#define FP(x) (auto(cpp2gecko_impl::fp_const<(x)>))
 
 // Compare a float to a constant using binary representation to avoid an .sdata entry
 namespace cpp2gecko_impl {
