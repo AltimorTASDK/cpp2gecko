@@ -77,8 +77,12 @@ gecko: $(TARGETS) | clean-unused
 
 $(INIFILE): $(BINFILE)
 #   Convert to 2 columns of hex words
+#   Remove unnecessary b __end if present
 #   Set C2 code type and make last word null
-	@data=$$(od --endian=big -v -An -w4 -t u4 $< | xargs printf '%08X %08X\n'); \
+	@data=$$(od --endian=big -v -An -w4 -t u4 $< | \
+	         xargs printf '%08X' | \
+	         sed -r 's/4800000460000000(00000000)?$$/60000000\1/' | \
+	         sed -r 's/(.{8})(.{8})/\1 \2\n/g'); \
 	 printf "%s" "C2$${data:2:-8}00000000" > $@
 
 $(BINFILE): $(ELFFILE)
