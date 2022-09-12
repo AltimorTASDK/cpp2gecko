@@ -27,11 +27,16 @@ OBJDIR := $(BUILDDIR)/obj
 DEPDIR := $(BUILDDIR)/dep
 
 GAMELD  := $(BUILDDIR)/game.ld
+GAMEH   := $(BUILDDIR)/game.h
 GECKOLD := $(ROOT)/gecko.ld
 LDFLAGS := -Wl,--gc-sections -nostdlib -T$(GECKOLD) -T$(GAMELD)
 
 DEFINES := $(foreach def, $(USERDEFS), -D$(def))
 DEFINES += -DGEKKO -DGECKO
+
+PPFLAGS := $(foreach dir, $(INCLUDE), -I$(dir)) \
+           -I"$(DEVKITPATH)/libogc/include" \
+           $(DEFINES)
 
 # Access all globals through PIC register
 CFLAGS   := -msdata=eabi -G 4096 \
@@ -40,13 +45,13 @@ CFLAGS   := -msdata=eabi -G 4096 \
             -Wno-pointer-arith -Wno-volatile-register-var \
             -ffunction-sections -fdata-sections \
             -fno-builtin-sqrt -fno-builtin-sqrtf \
-			$(foreach dir, $(INCLUDE), -I$(dir)) \
-			-I"$(DEVKITPATH)/libogc/include" \
 			-include $(ROOT)/src/defines.h \
-			$(DEFINES)
+			$(PPFLAGS)
 
-ASFLAGS  := $(DEFINES) -Wa,-mregnames -Wa,-mgekko
 CXXFLAGS := $(CFLAGS) -std=c++2b -fconcepts -fno-rtti -fno-exceptions
+
+ASFLAGS  := $(PPFLAGS) -Wa,-mregnames -Wa,-mgekko \
+			-include $(GAMEH)
 
 SRCFILES := $(foreach dir, $(SRCDIR), $(shell find $(dir) -type f -name '*.c'   2> /dev/null)) \
             $(foreach dir, $(SRCDIR), $(shell find $(dir) -type f -name '*.cpp' 2> /dev/null)) \
@@ -82,7 +87,7 @@ $(INIFILE): $(BINFILE)
 $(BINFILE): $(ELFFILE)
 	$(OBJCOPY) -O binary $< $@
 
-$(ELFFILE): $(OBJFILES) $(ASMFIXED) $(ASMFILES) $(GECKOLD) $(GAMELD)
+$(ELFFILE): $(OBJFILES) $(ASMFIXED) $(ASMFILES) $(GECKOLD) $(GAMELD) $(GAMEH)
 	@[ -d $(@D) ] || mkdir -p $(@D)
 	$(CC) $(LDFLAGS) $(OBJFILES) -o $@
 
@@ -110,12 +115,16 @@ $(ASMDIR)/%.cpp.s: %.cpp
 $(GAMELD): $(MAPFILE) $(TOOLS)/map_to_linker_script.py
 	python $(TOOLS)/map_to_linker_script.py $< $@
 
+$(GAMEH): $(MAPFILE) $(TOOLS)/map_to_asm_header.py
+	python $(TOOLS)/map_to_asm_header.py $< $@
+
 .PHONY: clean
 clean:
 	rm -rf $(BUILDDIR)
 
 # Remove unused build artifacts
-USED := $(GAMELD) $(ASMFILES) $(ASMFIXED) $(OBJFILES) $(DEPFILES) \
+USED := $(ASMFILES) $(ASMFIXED) $(OBJFILES) $(DEPFILES) \
+        $(GAMELD) $(GAMEH) \
         $(ELFFILE) $(BINFILE) $(INIFILE) $(DUMPS)
 
 ARTIFACTS := $(shell find $(BUILDDIR) -type f 2> /dev/null)
