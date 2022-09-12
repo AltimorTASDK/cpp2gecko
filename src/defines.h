@@ -56,7 +56,7 @@ extern "C" void __end();
 	asm(".section .end, \"ax\"                                     \r\n"   \
 	    ".global __end                                             \r\n"   \
 	    "__end:                                                    \r\n"   \
-	    "        nop                                               \r\n");
+	    "        nop                                               \r\n")
 
 #define GECKO_INIT_PIC(target, entry, pic_regname)                             \
 	asm(".section .init, \"ax\"                                    \r\n"   \
@@ -81,4 +81,4 @@ extern "C" void __end();
 	asm(".section .end, \"ax\"                                     \r\n"   \
 	    ".global __end                                             \r\n"   \
 	    "__end:                                                    \r\n"   \
-	    "        nop                                               \r\n");
+	    "        nop                                               \r\n")
