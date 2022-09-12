@@ -61,19 +61,13 @@ ASMFIXED := $(ASMFILES:.s=.out.s)
 ELFFILE  := $(BINDIR)/gecko.elf
 BINFILE  := $(BINDIR)/gecko.bin
 INIFILE  := $(BINDIR)/gecko.ini
-
-TARGETS := $(INIFILE)
-
-ifdef ASMDUMP
-DUMPS   := $(patsubst %, %.asm, $(ELFFILE) $(OBJFILES))
-TARGETS += $(DUMPS)
-endif
+DUMPS    := $(patsubst %, %.asm, $(ELFFILE) $(OBJFILES))
 
 .PHONY: gecko
-gecko: $(TARGETS) | clean-unused
+gecko: $(INIFILE) $(DUMPS) | clean-unused
 
 %.asm: %
-	@$(OBJDUMP) -dr --source-comment="# " $< > $@
+	@$(OBJDUMP) -dr --source-comment="/// " $< > $@
 
 $(INIFILE): $(BINFILE)
 #   Convert to 2 columns of hex words
@@ -122,10 +116,7 @@ clean:
 
 # Remove unused build artifacts
 USED := $(GAMELD) $(ASMFILES) $(ASMFIXED) $(OBJFILES) $(DEPFILES) \
-        $(ELFFILE) $(BINFILE) $(INIFILE)
-ifdef ASMDUMP
-USED += $(DUMPS)
-endif
+        $(ELFFILE) $(BINFILE) $(INIFILE) $(DUMPS)
 
 ARTIFACTS := $(shell find $(BUILDDIR) -type f 2> /dev/null)
 UNUSED    := $(filter-out $(USED), $(ARTIFACTS))
