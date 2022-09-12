@@ -41,6 +41,9 @@ extern "C" [[gnu::section(".sdata")]] void *__target_stack[];
 
 extern "C" void __end();
 
+// Force elision of stwu r1, -8(r1)
+#define GECKO_NO_STACK_FRAME() asm(".set gecko.no_frame, 1")
+
 #define GECKO_INIT(target, entry)                                              \
 	[[gnu::section(".gecko.target"), gnu::used]]                           \
 	const auto __gecko_target = target;                                    \

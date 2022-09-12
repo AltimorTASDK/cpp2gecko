@@ -18,7 +18,8 @@ def asm_generator(asm, name, symbols):
     stack_offset = 0
 
     settings = {
-        'pic_reg': None
+        'pic_reg':  None,
+        'no_frame': 0
     }
 
     r13_base = symbols.get("R13_BASE")
@@ -43,6 +44,13 @@ def asm_generator(asm, name, symbols):
 
         if sym_name in ["__init", "__init_pic"] and sym_type == "function":
             # Remove unnecessary prologue/epilogue instructions
+            if settings['no_frame']:
+                # No r1/lr save
+                if line == "stwu 1,-8(1)":
+                    continue
+                if line == "addi 1,1,8":
+                    continue
+
             if line == "bl __end":
                 error(name, n, "No tail call optimization on __end()")
             elif line == "mflr 0":
