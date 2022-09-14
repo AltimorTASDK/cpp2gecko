@@ -42,7 +42,7 @@ PPFLAGS := $(foreach dir, $(INCLUDE), -I$(dir)) \
 CFLAGS   := -msdata=eabi -G 4096 \
 			-mogc -mcpu=750 -meabi -Os -g \
             -Wall -Wno-switch -Wno-unused-value -Wconversion -Warith-conversion -Wno-multichar \
-            -Wno-pointer-arith -Wno-volatile-register-var \
+            -Wno-pointer-arith -Wno-volatile-register-var -Wno-unused-variable \
             -ffunction-sections -fdata-sections \
             -fno-builtin-sqrt -fno-builtin-sqrtf \
 			-include $(ROOT)/src/defines.h \
