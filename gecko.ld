@@ -10,9 +10,10 @@ SECTIONS
 
     .init  : { KEEP(*(.init)) }
     /* .sdata must be after __init to get address from LR */
-    .sdata : { *( .sdata  .sdata.*)
-               *(  .sbss   .sbss.*) }
-    .text  : { *(  .text   .text.*) }
+    .sdata : { *(.sdata.shared)
+               *(.sdata .sdata.*)
+               *( .sbss  .sbss.*) }
+    .text  : { *( .text  .text.*) }
 
     .end   : { KEEP(*(.end)) }
 

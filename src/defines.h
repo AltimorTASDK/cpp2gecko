@@ -6,6 +6,9 @@
 #define GAME_GLOBAL extern "C" [[gnu::section(".game")]]
 #define GAME_SDATA  extern "C"
 
+// Store data at the start of .sdata for easy retrieval
+#define SHARED_DATA [[gnu::section(".sdata.shared")]]
+
 // Clown ass gcc only puts constant operands in .sdata
 // if they're integers, so floats have to be globals
 namespace cpp2gecko_impl {
@@ -82,3 +85,36 @@ extern "C" void __end();
 	    ".global __end                                             \r\n"   \
 	    "__end:                                                    \r\n"   \
 	    "        nop                                               \r\n")
+
+// Same as above but for a volatile PIC register
+#define GECKO_INIT_PIC_VOLATILE(target, entry, pic_regname)                    \
+	asm(".section .init, \"ax\"                                    \r\n"   \
+	    ".global __init                                            \r\n"   \
+	    "__init:                                                   \r\n"   \
+	    "        bl      __init_pic                                \r\n"); \
+	                                                                       \
+	asm(".set gecko.pic_reg, " pic_regname);                               \
+	[[gnu::section(".gecko.target"), gnu::used]]                           \
+	const auto __gecko_target = target;                                    \
+	extern "C" [[gnu::flatten]] void __init_pic()                          \
+	{                                                                      \
+		register void *__pic_register asm(pic_regname);                \
+		asm volatile("mflr %0" : "=r"(__pic_register));                \
+		entry();                                                       \
+		__end();                                                       \
+	}                                                                      \
+	                                                                       \
+	asm(".section .end, \"ax\"                                     \r\n"   \
+	    ".global __end                                             \r\n"   \
+	    "__end:                                                    \r\n"   \
+	    "        nop                                               \r\n")
+
+// Get a pointer to another injection's data
+template<typename T>
+inline T *get_shared_data(auto *injection)
+{
+	// Find the gecko code from the branch offset
+	// This assumes the branch has the AA/LK bits unset
+	const auto offset = *(int*)injection << 6 >> 6;
+	return (T*)((char*)injection + offset + 4);
+}
