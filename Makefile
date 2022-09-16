@@ -44,7 +44,7 @@ CFLAGS   := -msdata=eabi -G 4096 \
             -Wall -Wno-switch -Wno-unused-value -Wconversion -Warith-conversion -Wno-multichar \
             -Wno-pointer-arith -Wno-volatile-register-var -Wno-unused-variable \
             -ffunction-sections -fdata-sections \
-            -fno-builtin-sqrt -fno-builtin-sqrtf \
+            -fno-builtin-sqrt -fno-builtin-sqrtf -fno-builtin-memcpy \
 			-include $(ROOT)/src/defines.h \
 			$(PPFLAGS)
 
