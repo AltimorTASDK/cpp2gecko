@@ -112,7 +112,7 @@ def asm_generator(asm, name, symbols):
             if reg is None:
                 error(name, n, "Encountered @sda21 before .set gecko.pic_reg")
 
-            yield raw_line.replace("@sda21(0)", f"+0x800C@sdarel({reg})")
+            yield raw_line.replace("@sda21(0)", f"+0x8030@sdarel({reg})")
             continue
 
         yield raw_line
