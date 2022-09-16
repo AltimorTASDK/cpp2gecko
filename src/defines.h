@@ -109,6 +109,12 @@ extern "C" void __end();
 	    "__end:                                                    \r\n"   \
 	    "        nop                                               \r\n")
 
+#define GECKO_RETURN(value)                                                    \
+	return (void)[&] {                                                     \
+		register decltype(value) result asm("r3");                     \
+		result = (value);                                              \
+		FORCE_WRITE(result);                                           \
+	}()
 // Get a pointer to another injection's data
 template<typename T>
 inline T *get_shared_data(auto *injection)
