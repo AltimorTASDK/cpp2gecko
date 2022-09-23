@@ -19,6 +19,8 @@ SECTIONS
 
     . = ALIGN(8);
 
+    _SDA_BASE_ = ADDR(.sdata);
+
     __gecko_lines = (. - ADDR(.init)) / 8;
 
     /DISCARD/ : { *(.data .data.* .rodata .rodata.* .bss .bss.*) }
