@@ -1,5 +1,6 @@
 #include <bit>
 #include <cstdint>
+#include <type_traits>
 
 // Force absolute address references
 #define GAME_FUNC   extern "C" [[gnu::longcall]]
@@ -115,6 +116,7 @@ extern "C" void __end();
 		result = (value);                                              \
 		FORCE_WRITE(result);                                           \
 	}()
+
 // Get a pointer to another injection's data
 template<typename T>
 inline T *get_shared_data(auto *injection)
@@ -124,3 +126,34 @@ inline T *get_shared_data(auto *injection)
 	const auto offset = *(int*)injection << 6 >> 6;
 	return (T*)((char*)injection + offset + 4);
 }
+
+namespace cpp2gecko_impl {
+template<std::size_t N>
+consteval auto make_elf_note(const char (&name)[N], const auto &desc)
+{
+	struct elf_note {
+		uint32_t n_namesz;
+		uint32_t n_descsz;
+		uint32_t n_type;
+		// Wrap in struct to allow array copies
+		struct { std::remove_cvref_t<decltype(name)> value; } n_name alignas(4);
+		struct { std::remove_cvref_t<decltype(desc)> value; } n_desc alignas(4);
+	};
+	return elf_note {
+		.n_namesz = sizeof(name),
+		.n_descsz = sizeof(desc),
+		.n_type = 'GECK',
+		.n_name = std::bit_cast<decltype(elf_note::n_name)>(name),
+		.n_desc = std::bit_cast<decltype(elf_note::n_desc)>(desc)
+	};
+}
+}
+
+#define GECKO_ELF_NOTE(name, value)                                            \
+	namespace gecko_elf_notes {                                            \
+	[[gnu::section(".note.gecko."#name), gnu::used]]                       \
+	const auto name = cpp2gecko_impl::make_elf_note("gecko."#name, value); \
+	}                                                                      \
+	static_assert(true) // Force semicolon
+
+#define GECKO_NAME(value) GECKO_ELF_NOTE(name, value)

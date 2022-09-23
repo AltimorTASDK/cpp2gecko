@@ -65,6 +65,7 @@ ASMFIXED := $(ASMFILES:.s=.out.s)
 
 ELFFILE  := $(BINDIR)/gecko.elf
 BINFILE  := $(BINDIR)/gecko.bin
+NOTEFILE := $(BINDIR)/notes.bin
 INIFILE  := $(BINDIR)/gecko.ini
 DUMPS    := $(patsubst %, %.asm, $(ELFFILE) $(OBJFILES))
 
@@ -74,7 +75,7 @@ gecko: $(INIFILE) $(DUMPS) | clean-unused
 %.asm: %
 	@$(OBJDUMP) -dr --source-comment="/// " $< > $@
 
-$(INIFILE): $(BINFILE)
+$(INIFILE): $(BINFILE) $(NOTEFILE)
 #   Convert to 2 columns of hex words
 #   Remove unnecessary b __end if present
 #   Set C2 code type and make last word null
@@ -85,7 +86,10 @@ $(INIFILE): $(BINFILE)
 	 printf "%s" "C2$${data:2:-8}00000000" > $@
 
 $(BINFILE): $(ELFFILE)
-	$(OBJCOPY) -O binary $< $@
+	$(OBJCOPY) -O binary -R .note.* $< $@
+
+$(NOTEFILE): $(ELFFILE)
+	$(OBJCOPY) -O binary -j .note.gecko.* $< $@
 
 $(ELFFILE): $(OBJFILES) $(ASMFIXED) $(ASMFILES) $(GECKOLD) $(GAMELD) $(GAMEH)
 	@[ -d $(@D) ] || mkdir -p $(@D)
@@ -125,7 +129,7 @@ clean:
 # Remove unused build artifacts
 USED := $(ASMFILES) $(ASMFIXED) $(OBJFILES) $(DEPFILES) \
         $(GAMELD) $(GAMEH) \
-        $(ELFFILE) $(BINFILE) $(INIFILE) $(DUMPS)
+        $(ELFFILE) $(BINFILE) $(NOTEFILE) $(INIFILE) $(DUMPS)
 
 ARTIFACTS := $(shell find $(BUILDDIR) -type f 2> /dev/null)
 UNUSED    := $(filter-out $(USED), $(ARTIFACTS))
