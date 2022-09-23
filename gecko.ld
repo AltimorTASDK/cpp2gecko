@@ -19,6 +19,7 @@ SECTIONS
 
     . = ALIGN(8);
 
+    /* provide explicit base for sdarel relocations */
     _SDA_BASE_ = ADDR(.sdata);
 
     __gecko_lines = (. - ADDR(.init)) / 8;
