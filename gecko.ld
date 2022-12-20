@@ -24,6 +24,8 @@ SECTIONS
 
     __gecko_lines = (. - ADDR(.init)) / 8;
 
-    /DISCARD/ : { *(.data .data.* .rodata .rodata.* .bss .bss.*) }
+    .note.gecko : { *(.note.gecko.*) }
+
+    /DISCARD/ : { *(.data .data.* .rodata .rodata.* .bss .bss.* .note .note.*) }
 
 }

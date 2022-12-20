@@ -89,7 +89,7 @@ $(BINFILE): $(ELFFILE)
 	$(OBJCOPY) -O binary -R .note.* $< $@
 
 $(NOTEFILE): $(ELFFILE)
-	$(OBJCOPY) -O binary -j .note.gecko.* $< $@
+	$(OBJCOPY) -O binary -j .note.gecko $< $@
 
 $(ELFFILE): $(OBJFILES) $(ASMFIXED) $(ASMFILES) $(GECKOLD) $(GAMELD) $(GAMEH)
 	@[ -d $(@D) ] || mkdir -p $(@D)
