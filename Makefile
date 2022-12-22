@@ -91,7 +91,7 @@ $(BINFILE): $(ELFFILE)
 $(NOTEFILE): $(ELFFILE)
 	$(OBJCOPY) -O binary -j .note.gecko $< $@
 
-$(ELFFILE): $(OBJFILES) $(ASMFIXED) $(ASMFILES) $(GECKOLD) $(GAMELD) $(GAMEH)
+$(ELFFILE): $(OBJFILES) $(ASMFIXED) $(ASMFILES) $(GECKOLD) $(GAMELD)
 	@[ -d $(@D) ] || mkdir -p $(@D)
 	$(CC) $(LDFLAGS) $(OBJFILES) -o $@
 
@@ -99,7 +99,7 @@ $(OBJDIR)/%.o: $(ASMDIR)/%.out.s
 	@[ -d $(@D) ] || mkdir -p $(@D)
 	$(CC) $(ASFLAGS) -c $< -o $@
 
-$(OBJDIR)/%.S.o: %.S
+$(OBJDIR)/%.S.o: %.S $(GAMEH)
 	@[ -d $(@D) ] || mkdir -p $(@D)
 	$(CC) $(ASFLAGS) -c $< -o $@
 
@@ -117,9 +117,11 @@ $(ASMDIR)/%.cpp.s: %.cpp
 	$(CXX) -MMD -MP -MF $(patsubst $(ASMDIR)/%.s, $(DEPDIR)/%.d, $@) $(CXXFLAGS) -c $< -S -fverbose-asm -o $@
 
 $(GAMELD): $(MAPFILE) $(TOOLS)/map_to_linker_script.py
+	@[ -d $(@D) ] || mkdir -p $(@D)
 	python $(TOOLS)/map_to_linker_script.py $< $@
 
 $(GAMEH): $(MAPFILE) $(TOOLS)/map_to_asm_header.py
+	@[ -d $(@D) ] || mkdir -p $(@D)
 	python $(TOOLS)/map_to_asm_header.py $< $@
 
 .PHONY: clean
