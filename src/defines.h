@@ -100,7 +100,7 @@ extern "C" void __end();
 	extern "C" [[gnu::flatten]] void __init_pic()                          \
 	{                                                                      \
 		register void *__pic_register asm(pic_regname);                \
-		asm volatile("mflr %0" : "=r"(__pic_register));                \
+		asm volatile("mflr " pic_regname);                             \
 		entry();                                                       \
 		__end();                                                       \
 	}                                                                      \
