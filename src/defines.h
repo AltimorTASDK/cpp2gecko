@@ -33,7 +33,7 @@ constexpr bool fp_equal(float value)
 }
 }
 
-#define FP_EQUAL(x, c) (cpp2gecko_impl::fp_equal<c>(x))
+#define FP_EQUAL(x, c) (cpp2gecko_impl::fp_equal<(c)>((x)))
 
 // Prevent the compiler from optimizing register writes away
 #define FORCE_WRITE(x) asm volatile(""::"r"(x))
