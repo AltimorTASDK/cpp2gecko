@@ -31,27 +31,22 @@ GAMEH   := $(BUILDDIR)/game.h
 GECKOLD := $(ROOT)/gecko.ld
 LDFLAGS := -Wl,--gc-sections -nostdlib -T$(GECKOLD) -T$(GAMELD)
 
-DEFINES := $(foreach def, $(USERDEFS), -D$(def))
-DEFINES += -DGEKKO -DGECKO
-
-PPFLAGS := $(foreach dir, $(INCLUDE), -I$(dir)) \
-           -I"$(DEVKITPATH)/libogc/include" \
-           $(DEFINES)
+PPFLAGS := -I"$(DEVKITPATH)/libogc/include" \
+           -DGEKKO -DGECKO $(EXTRA_PPFLAGS)
 
 # Access all globals through PIC register
-CFLAGS   := -msdata=eabi -G 4096 \
-			-mogc -mcpu=750 -meabi -Os -g \
-            -Wall -Wno-switch -Wno-unused-value -Wconversion -Warith-conversion -Wno-multichar \
-            -Wno-pointer-arith -Wno-volatile-register-var -Wno-unused-variable \
-            -ffunction-sections -fdata-sections \
-            -fno-builtin-sqrt -fno-builtin-sqrtf -fno-builtin-memcpy \
-			-include $(ROOT)/src/defines.h \
-			$(PPFLAGS)
+CFLAGS := -msdata=eabi -G 4096 \
+          -mogc -mcpu=750 -meabi -Os -g \
+          -Wall -Wno-switch -Wno-unused-value -Wconversion -Warith-conversion -Wno-multichar \
+          -Wno-pointer-arith -Wno-volatile-register-var -Wno-unused-variable \
+          -ffunction-sections -fdata-sections \
+          -fno-builtin-sqrt -fno-builtin-sqrtf -fno-builtin-memcpy \
+          -include $(ROOT)/src/defines.h \
+          $(PPFLAGS) $(EXTRA_CFLAGS)
 
-CXXFLAGS := $(CFLAGS) -std=c++2b -fconcepts -fno-rtti -fno-exceptions
 
-ASFLAGS  := $(PPFLAGS) -Wa,-mregnames -Wa,-mgekko \
-			-include $(GAMEH)
+CXXFLAGS := $(CFLAGS) -std=c++2b -fno-rtti -fno-exceptions $(EXTRA_CXXFLAGS)
+ASFLAGS  := $(PPFLAGS) -Wa,-mregnames -Wa,-mgekko -include $(GAMEH) $(EXTRA_ASFLAGS)
 
 SRCFILES := $(foreach dir, $(SRCDIR), $(shell find $(dir) -type f -name '*.c'   2> /dev/null)) \
             $(foreach dir, $(SRCDIR), $(shell find $(dir) -type f -name '*.cpp' 2> /dev/null)) \
