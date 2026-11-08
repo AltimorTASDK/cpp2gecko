@@ -15,9 +15,15 @@ SECTIONS
                *( .sbss  .sbss.*) }
     .text  : { *( .text  .text.*) }
 
-    .end   : { KEEP(*(.end)) }
-
-    . = ALIGN(8);
+    /* Emit alignment bytes, rather than only rounding the location counter.
+       The exporter replaces the last word with the C2 return-branch slot. */
+    .end   : {
+        KEEP(*(.end))
+        /* Assembly-only codes may not provide an .end input section.
+           An explicit word ensures this section is backed by file bytes. */
+        LONG(0x60000000);
+        . = ALIGN(8);
+    } = 0x60000000
 
     /* provide explicit base for sdarel relocations */
     _SDA_BASE_ = ADDR(.sdata);
